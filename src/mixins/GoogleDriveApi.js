@@ -33,6 +33,7 @@ const GoogleDriveApi = {
             this.GoogleDriveApi.tokenClient = window.google.accounts.oauth2.initTokenClient({
                 client_id: this.GoogleDriveApi.CLIENT_ID,
                 scope: this.GoogleDriveApi.SCOPES,
+                redirect_uri: "https://phaede.com",  // <-- ADD THIS LINE
                 callback: '', // defined later
             });
             this.GoogleDriveApi.gisInited = true;
