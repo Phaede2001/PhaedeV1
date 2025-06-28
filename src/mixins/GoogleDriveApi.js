@@ -5,7 +5,7 @@ const GoogleDriveApi = {
                 CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
                 API_KEY: import.meta.env.VITE_GOOGLE_API_KEY,
                 DISCOVERY_DOC: 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
-                SCOPES: 'https://www.googleapis.com/auth/drive.file',
+                SCOPES: 'https://www.googleapis.com/auth/drive',
                 tokenClient: null,
                 loggedin: false,
                 files: [],
