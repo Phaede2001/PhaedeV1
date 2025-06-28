@@ -54,15 +54,23 @@ const GoogleDriveApi = {
                             xhr.open('POST', 'https://oauth2.googleapis.com/token');
                             xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
                             xhr.onload = () => {
-                                const tokens = JSON.parse(xhr.responseText);
-                                window.gapi.client.setToken(tokens); // IMPORTANT: Set the token for GAPI
-                                this.GoogleDriveApi.loggedin = true;
-                                console.log("Token received, login complete!");
+                                // IMPORTANT: First, check if the request was successful
+                                if (xhr.status === 200) {
+                                    const tokens = JSON.parse(xhr.responseText);
+                                    window.gapi.client.setToken(tokens); // Set the token for GAPI
+                                    this.GoogleDriveApi.loggedin = true;
+                                    console.log("Token received, login complete!");
+                                } else {
+                                    console.error("Token exchange failed!", xhr.status, xhr.responseText);
+                                }
                             };
                             xhr.onerror = function() {
                                 console.error("Error during token exchange request.");
                             };
-                            xhr.send(`code=${response.code}&client_id=${this.GoogleDriveApi.CLIENT_ID}&redirect_uri=postmessage`);
+                            // This is the corrected request body with the required 'grant_type'
+                            const requestBody = `code=${response.code}&client_id=${this.GoogleDriveApi.CLIENT_ID}&grant_type=authorization_code&redirect_uri=postmessage`;
+                            xhr.send(requestBody);
+                            // ...
                         } else {
                             console.error("Error: No authorization code received.", response);
                         }
