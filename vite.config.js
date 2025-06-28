@@ -14,8 +14,8 @@ export default defineConfig({
       injectRegister: "auto", // Automatically inject the service worker registration
       devOptions: { enabled: true },
       manifest: {
-        "name": "Wavemaker Cards",
-        "short_name": "Wavemaker",
+        "name": "Phaede",
+        "short_name": "Phaede",
         "theme_color": "#424242",
         "icons": [
             {

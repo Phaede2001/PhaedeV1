@@ -21,7 +21,7 @@ async function createWindow() {
       nodeIntegration: true
     }
   })
-  win.setTitle("Wavemaker Cards V4")
+  win.setTitle("Phaede V1")
 
   if (process.env.WEBPACK_DEV_SERVER_URL) {
     // Load the url of the dev server if in development mode

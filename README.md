@@ -6,7 +6,7 @@
 
 [![Logo](src/assets/logo.png)](https://github.com/wavemakercards/wavemaker-cards-v4)
 
-### Wavemaker Cards
+### Phaede
 
 Novel Writing Software   
 [**Latest Release (WIN/MAC/LINUX)**](https://github.com/wavemakercards/wavemaker-cards-v4/releases)   
