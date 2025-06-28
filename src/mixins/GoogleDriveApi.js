@@ -30,12 +30,17 @@ const GoogleDriveApi = {
 
         // Initializes the GAPI library to be ready to make calls to the Drive API
         async GoogleDriveInitializeGapi() {
-            console.log("Initializing GAPI client...");
+            console.log("Step 1: Initializing GAPI client...");
             await window.gapi.client.init({
                 apiKey: this.GoogleDriveApi.API_KEY,
                 discoveryDocs: [this.GoogleDriveApi.DISCOVERY_DOC],
             });
+            
+            // THIS IS THE NEW, CRITICAL LINE
+            await window.gapi.client.load('oauth2', 'v2'); 
+            
             this.GoogleDriveApi.gapiInited = true;
+            this.GoogleDriveCheckAuthStatus();
         },
 
         // Initializes the modern GIS "Code Client" for handling the user-facing login
