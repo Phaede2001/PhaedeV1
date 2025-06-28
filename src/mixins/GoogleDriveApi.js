@@ -45,42 +45,21 @@ const GoogleDriveApi = {
             }
 
             // 2. Initialize the GIS Code Client for the pop-up flow.
-            const tokenClient = window.google.accounts.oauth2.initCodeClient({
+            // filepath: [GoogleDriveApi.js](http://_vscodecontentref_/3)
+            const tokenClient = window.google.accounts.oauth2.initTokenClient({
                 client_id: this.GoogleDriveApi.CLIENT_ID,
                 scope: this.GoogleDriveApi.SCOPES,
                 callback: (response) => {
-                    // 3. This callback runs AFTER the user signs in and grants permission.
-                    if (response.code) {
-                        console.log("Code received. Exchanging for token...");
-
-                        // 4. Exchange the temporary code for a real access token.
-                        const xhr = new XMLHttpRequest();
-                        xhr.open('POST', 'https://oauth2.googleapis.com/token');
-                        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-                        xhr.onload = () => {
-                            if (xhr.status === 200) {
-                                const tokens = JSON.parse(xhr.responseText);
-                                window.gapi.client.setToken(tokens);
-                                this.GoogleDriveApi.loggedin = true;
-                                console.log("Token set successfully! Login Complete!");
-                            } else {
-                                console.error("Token exchange failed!", xhr.status, xhr.responseText);
-                            }
-                        };
-                        xhr.onerror = function() {
-                            console.error("Error during token exchange request.");
-                        };
-                        const requestBody = `code=${response.code}&client_id=${this.GoogleDriveApi.CLIENT_ID}&grant_type=authorization_code&redirect_uri=postmessage`;
-                        xhr.send(requestBody);
+                    if (response.access_token) {
+                        window.gapi.client.setToken({ access_token: response.access_token });
+                        this.GoogleDriveApi.loggedin = true;
+                        console.log("Token set successfully! Login Complete!");
                     } else {
-                        console.error("Error: No authorization code received.", response);
+                        console.error("Error: No access token received.", response);
                     }
                 },
             });
-
-            // 5. With everything ready, trigger the login pop-up for the user.
-            console.log("Requesting authorization code from user...");
-            tokenClient.requestCode();
+            tokenClient.requestAccessToken();
         },
 
         // This function signs the user out.
