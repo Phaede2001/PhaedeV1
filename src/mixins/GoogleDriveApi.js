@@ -49,24 +49,9 @@ const GoogleDriveApi = {
          *  Sign in the user upon button click.
          */
         async GoogleDriveAuthStart() {
-            console.log("GoogleDriveAuthStart")
-            this.GoogleDriveApi.tokenClient.callback = (resp) => {
-                console.log("GoogleDriveAuthStart", "callback", resp)
-                if (resp.error !== undefined) {
-                    throw (resp);
-                }
-                //  document.getElementById('authorize_button').innerText = 'Refresh';
-                this.GoogleDriveApi.loggedin = true
-            };
-
-            if (window.gapi.client.getToken() === null) {
-                // Prompt the user to select a Google Account and ask for consent to share their data
-                // when establishing a new session.
-                this.GoogleDriveApi.tokenClient.requestAccessToken({ prompt: 'consent' });
-            } else {
-                // Skip display of account chooser and consent dialog for an existing session.
-                this.GoogleDriveApi.tokenClient.requestAccessToken({ prompt: '' });
-            }
+            console.log("GoogleDriveAuthStart - Requesting Code");
+            // Prompt the user to select a Google Account and ask for consent
+            this.GoogleDriveApi.tokenClient.requestCode();
         },
         /**
          *  Sign out the user upon button click.
