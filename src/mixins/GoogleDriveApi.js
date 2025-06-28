@@ -19,8 +19,18 @@ const GoogleDriveApi = {
         }
     },
     methods: {
+        // This is the main entry point called by the button in your Vue component
+        GoogleDriveSignIn() {
+            console.log("Starting Sign-In Process...");
+            // Load the GAPI client library
+            window.gapi.load('client', () => this.GoogleDriveInitializeGapi());
+            // Initialize the GIS client
+            this.GoogleDrivegisLoaded();
+        },
+
+        // 1. Initializes the older GAPI library so we can make API calls (like listing files)
         async GoogleDriveInitializeGapi() {
-            console.log("GoogleDriveInitializeGapi")
+            console.log("Step 1: Initializing GAPI client...");
             await window.gapi.client.init({
                 apiKey: this.GoogleDriveApi.API_KEY,
                 discoveryDocs: [this.GoogleDriveApi.DISCOVERY_DOC],
@@ -28,34 +38,68 @@ const GoogleDriveApi = {
             this.GoogleDriveApi.gapiInited = true;
             this.GoogleDriveCheckAuthStatus();
         },
+
+        // 2. Initializes the NEW Google Identity Services (GIS) client for the popup flow
         async GoogleDrivegisLoaded() {
-            console.log("GoogleDrivegisLoaded")
-            this.GoogleDriveApi.tokenClient = window.google.accounts.oauth2.initTokenClient({
+            console.log("Step 2: Initializing GIS code client...");
+            this.GoogleDriveApi.tokenClient = window.google.accounts.oauth2.initCodeClient({
                 client_id: this.GoogleDriveApi.CLIENT_ID,
                 scope: this.GoogleDriveApi.SCOPES,
-                redirect_uri: "https://phaede.com",  // <-- ADD THIS LINE
-                callback: '', // defined later
+                callback: (response) => {
+                    // This callback is triggered after the user selects their account in the popup
+                    this.GoogleDriveExchangeCodeForToken(response);
+                },
             });
             this.GoogleDriveApi.gisInited = true;
             this.GoogleDriveCheckAuthStatus();
         },
-        GoogleDriveCheckAuthStatus() {
-            console.log("GoogleDriveCheckAuthStatus")
-            if (this.GoogleDriveApi.gapiInited && this.GoogleDriveApi.gisInited) {
-                this.GoogleDriveAuthStart()
+
+        // 3. This function is called by the callback in Step 2.
+        // It takes the temporary code from Google and exchanges it for a real access token.
+        async GoogleDriveExchangeCodeForToken(response) {
+            console.log("Step 3: Exchanging authorization code for access token...");
+            if (response.code) {
+                try {
+                    // Use GAPI to perform the code exchange
+                    const { result } = await window.gapi.client.oauth2.token.exchangeCode({
+                        'code': response.code,
+                        'client_id': this.GoogleDriveApi.CLIENT_ID,
+                        'redirect_uri': 'postmessage' // Use a standard value for web clients
+                    });
+                    
+                    // Set the token for the GAPI client
+                    window.gapi.client.setToken(result);
+                    this.GoogleDriveApi.loggedin = true; // LOGIN IS SUCCESSFUL
+                    console.log("Login Successful!");
+
+                } catch (err) {
+                    console.error("Error exchanging code for token:", err);
+                }
+            } else {
+                console.error("Callback response did not contain a code:", response);
             }
         },
-        /**
-         *  Sign in the user upon button click.
-         */
-        async GoogleDriveAuthStart() {
-            console.log("GoogleDriveAuthStart - Requesting Code");
-            // Prompt the user to select a Google Account and ask for consent
-            this.GoogleDriveApi.tokenClient.requestCode();
+        
+        // 4. Checks if both libraries are ready, then starts the login flow
+        GoogleDriveCheckAuthStatus() {
+            if (this.GoogleDriveApi.gapiInited && this.GoogleDriveApi.gisInited) {
+                console.log("Step 4: Both clients initialized, starting auth flow...");
+                this.GoogleDriveAuthStart();
+            }
         },
-        /**
-         *  Sign out the user upon button click.
-         */
+
+        // 5. This is now very simple: it just asks our new code client to request a code.
+        async GoogleDriveAuthStart() {
+            console.log("Step 5: Requesting authorization code from user...");
+            if (this.GoogleDriveApi.tokenClient) {
+                this.GoogleDriveApi.tokenClient.requestCode();
+            } else {
+                console.error("Token client is not initialized.");
+            }
+        },
+
+        // The rest of the functions for SignOut, ListFiles, etc., remain the same
+        // as they rely on the GAPI client which is now correctly authorized.
         GoogleDriveSignOut() {
             const token = window.gapi.client.getToken();
             if (token !== null) {
@@ -64,9 +108,10 @@ const GoogleDriveApi = {
                 this.GoogleDriveApi.loggedin = false
                 this.$root.$data.popup.name = null
             }
-
         },
+
         async GoogleDriveListFiles() {
+            // This function does not need to change
             this.GoogleDriveApi.searching = true
             console.log("GoogleDriveListFiles")
             let response;
@@ -87,47 +132,36 @@ const GoogleDriveApi = {
             }
             this.GoogleDriveApi.files = files
             this.GoogleDriveApi.searching = false
-            // Flatten to string to display
-            /*         const output = files.reduce(
-                        (str, file) => `${str}${file.name} (${file.id}\n`,
-                        'Files:\n');
-                    console.log(output); */
-        }
-        ,
+        },
+        
         GoogleDriveReadFile() {
-            //console.log("Reading File");
+            // This function does not need to change
             var request = window.gapi.client.drive.files.get({
                 fileId: this.GoogleDriveApi.CURRENT_FILE_OBJ.id,
                 alt: 'media'
             })
             request.then(async (response) => {
-                // this.CURRENT_FILE_OBJ = response;
-                //console.log(response.body)
                 const mydata = new Blob([response.body], {
                     type: "text/json;charset=utf-8",
                 });
                 await this.$root.databaseImport(mydata)
                 this.$root.getSettings()
-
             }, function (error) {
                 console.error(error)
             })
-            //console.log("Got" , CURRENT_FILE_OBJ);
             this.$root.$data.popup.name = null
-            return request; //for batch request
+            return request;
         },
+        
         async GoogleDriveWriteFile(callback) {
+            // This function does not need to change
             this.GoogleDriveApi.loading = true;
             this.GoogleDriveApi.CURRENT_FILE_NAME = this.$root.session.settings.ProjectName
             let blob = await this.$root.databaseExport()
-            console.log("blob", blob)
             let CURRENT_FILE_CONTENTS = await blob.text()
-            console.log("CURRENT_FILE_CONTENTS", CURRENT_FILE_CONTENTS)
             var filePath = "";
-            console.log(this.GoogleDriveApi.CURRENT_FILE_OBJ);
             if (this.GoogleDriveApi.CURRENT_FILE_OBJ) {
                 filePath = this.GoogleDriveApi.CURRENT_FILE_OBJ.id;
-
             }
             const boundary = '-------314159265358979323846';
             const delimiter = "\r\n--" + boundary + "\r\n";
@@ -137,7 +171,6 @@ const GoogleDriveApi = {
             var multipartRequestBody = delimiter + 'Content-Type: application/json\r\n\r\n' + JSON.stringify(metadata) + delimiter + 'Content-Type: ' + contentType + '\r\n\r\n' + CURRENT_FILE_CONTENTS + close_delim;
             var request
             if (filePath == "") {
-                console.log("newfile")
                 request = window.gapi.client.request({
                     'path': '/upload/drive/v3/files',
                     'method': 'POST',
@@ -162,15 +195,8 @@ const GoogleDriveApi = {
                     'body': multipartRequestBody
                 });
             }
-
-
             if (!callback) {
                 callback = (file) => {
-                    if (this.GoogleDriveApi.CURRENT_FILE_OBJ) {
-                        console.log("Data Saved to GDrive", this.GoogleDriveApi.CURRENT_FILE_OBJ);
-                    } else {
-                        console.log("Data Created on GDrive");
-                    }
                     this.GoogleDriveApi.CURRENT_FILE_OBJ = file;
                     this.GoogleDriveApi.loading = false;
                     this.$root.$data.popup.name = null
@@ -178,11 +204,6 @@ const GoogleDriveApi = {
             }
             request.execute(callback);
         },
-
-        GoogleDriveSignIn() {
-            window.gapi.load('client', this.GoogleDriveInitializeGapi);
-            this.GoogleDrivegisLoaded()
-        }
     },
 }
 export default GoogleDriveApi
