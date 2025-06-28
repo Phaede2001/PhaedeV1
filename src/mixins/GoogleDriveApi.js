@@ -6,80 +6,84 @@ const GoogleDriveApi = {
                 API_KEY: import.meta.env.VITE_GOOGLE_API_KEY,
                 DISCOVERY_DOC: 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
                 SCOPES: 'https://www.googleapis.com/auth/drive.file',
-                gapiInited: false,
-                gisInited: false,
                 tokenClient: null,
                 loggedin: false,
                 files: [],
                 CURRENT_FILE_OBJ: null,
                 CURRENT_FILE_NAME: "",
                 CURRENT_FILE_CONTENTS: "",
-                loading: false
+                loading: false,
+                searching: false,
             }
         }
     },
     methods: {
         // This is the ONLY function the login button should call.
-        GoogleDriveSignIn() {
-            // Use an arrow function to preserve 'this' context, which fixes the previous TypeError
-            window.gapi.load('client', () => this.GoogleDriveInitializeGapi());
-            this.GoogleDriveInitializeGisClient();
-        },
+        // It is self-contained and ensures everything happens in the correct order.
+        async GoogleDriveSignIn() {
+            console.log("Starting final, corrected sign-in flow...");
 
-        async GoogleDriveInitializeGapi() {
-            await window.gapi.client.init({
-                apiKey: this.GoogleDriveApi.API_KEY,
-                discoveryDocs: [this.GoogleDriveApi.DISCOVERY_DOC],
-            });
-            
-            // This line is correct and necessary. It loads the helper for token exchange.
-            await window.gapi.client.load('oauth2', 'v2');
-            
-            this.GoogleDriveApi.gapiInited = true;
-        },
+            // 1. Ensure the main GAPI client and the oauth2 helper are loaded and ready.
+            try {
+                await new Promise((resolve, reject) => {
+                    // Load the 'client' library. The callback initializes it.
+                    window.gapi.load('client', () => {
+                        window.gapi.client.init({
+                            apiKey: this.GoogleDriveApi.API_KEY,
+                            discoveryDocs: [this.GoogleDriveApi.DISCOVERY_DOC],
+                        })
+                        // After init, also load the specific oauth2 library needed for token exchange
+                        .then(() => window.gapi.client.load('oauth2', 'v2'))
+                        .then(resolve) // Mark the promise as resolved
+                        .catch(reject); // Mark the promise as rejected if any step fails
+                    });
+                });
+                console.log("GAPI client and GAPI-OAuth2 helper are ready.");
+            } catch (err) {
+                console.error("Error initializing GAPI client:", err);
+                return; // Stop if GAPI fails
+            }
 
-        GoogleDriveInitializeGisClient() {
-            this.GoogleDriveApi.tokenClient = window.google.accounts.oauth2.initCodeClient({
+            // 2. Initialize the GIS Code Client for the pop-up flow.
+            const tokenClient = window.google.accounts.oauth2.initCodeClient({
                 client_id: this.GoogleDriveApi.CLIENT_ID,
                 scope: this.GoogleDriveApi.SCOPES,
                 callback: (response) => {
+                    // 3. This callback runs AFTER the user signs in and grants permission.
                     if (response.code) {
-                        // THIS IS THE CORRECTED SECTION
-                        // We use the gapi.client.oauth2.token.exchangeCode helper function
-                        // instead of a manual XMLHttpRequest.
-                        window.gapi.client.oauth2.token.exchangeCode({
-                            'code': response.code,
-                            'client_id': this.GoogleDriveApi.CLIENT_ID,
-                            'redirect_uri': 'postmessage' // This is the correct value for this flow
-                        }).then((tokens) => {
-                            // The exchange was successful
-                            console.log("Token exchange successful!", tokens);
-                            window.gapi.client.setToken(tokens.result);
-                            this.GoogleDriveApi.loggedin = true;
-                            console.log("Login Complete!");
-                        }).catch((err) => {
-                            console.error("Error during token exchange:", err);
-                        });
+                        console.log("Code received. Exchanging for token...");
+
+                        // 4. Exchange the temporary code for a real access token.
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('POST', 'https://oauth2.googleapis.com/token');
+                        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                        xhr.onload = () => {
+                            if (xhr.status === 200) {
+                                const tokens = JSON.parse(xhr.responseText);
+                                window.gapi.client.setToken(tokens);
+                                this.GoogleDriveApi.loggedin = true;
+                                console.log("Token set successfully! Login Complete!");
+                            } else {
+                                console.error("Token exchange failed!", xhr.status, xhr.responseText);
+                            }
+                        };
+                        xhr.onerror = function() {
+                            console.error("Error during token exchange request.");
+                        };
+                        const requestBody = `code=${response.code}&client_id=${this.GoogleDriveApi.CLIENT_ID}&grant_type=authorization_code&redirect_uri=postmessage`;
+                        xhr.send(requestBody);
                     } else {
                         console.error("Error: No authorization code received.", response);
                     }
                 },
             });
-            this.GoogleDriveApi.gisInited = true;
+
+            // 5. With everything ready, trigger the login pop-up for the user.
+            console.log("Requesting authorization code from user...");
+            tokenClient.requestCode();
         },
 
-        GoogleDriveAuthStart() {
-            // We trigger the popup only after GAPI is fully initialized.
-            if (this.GoogleDriveApi.gapiInited) {
-                this.GoogleDriveApi.tokenClient.requestCode();
-            } else {
-                // If GAPI isn't ready, wait a moment and try again.
-                // This prevents race conditions.
-                setTimeout(() => this.GoogleDriveAuthStart(), 100);
-            }
-        },
-
-        // The SignOut, ListFiles, and other functions remain the same
+        // This function signs the user out.
         GoogleDriveSignOut() {
             const token = window.gapi.client.getToken();
             if (token !== null) {
@@ -90,59 +94,61 @@ const GoogleDriveApi = {
             }
         },
 
-async GoogleDriveListFiles() {
-            this.GoogleDriveApi.searching = true
-            console.log("GoogleDriveListFiles")
-            let response;
-            try {
-                response = await window.gapi.client.drive.files.list({
-                    'pageSize': 10,
-                    'fields': 'files(id, name, size,  modifiedTime)',
-                    'q': "name contains '.wm4'"
-                });
-            } catch (err) {
-                console.log(err.message);
-                return;
-            }
-            const files = response.result.files;
-            if (!files || files.length == 0) {
-                console.log('No files found.');
-                this.GoogleDriveApi.files = []; // Ensure it's an empty array
-                this.GoogleDriveApi.searching = false;
-                return;
-            }
-            this.GoogleDriveApi.files = files
-            this.GoogleDriveApi.searching = false
-        },
-        GoogleDriveReadFile() {
-            var request = window.gapi.client.drive.files.get({
-                fileId: this.GoogleDriveApi.CURRENT_FILE_OBJ.id,
-                alt: 'media'
-            })
-            request.then(async (response) => {
-                const mydata = new Blob([response.body], {
-                    type: "text/json;charset=utf-8",
-                });
-                await this.$root.databaseImport(mydata)
-                this.$root.getSettings()
+        // This function lists the user's .wm4 files from Google Drive.
+        async GoogleDriveListFiles() {
+            this.GoogleDriveApi.searching = true;
+            console.log("GoogleDriveListFiles");
+            let response;
+            try {
+                response = await window.gapi.client.drive.files.list({
+                    'pageSize': 10,
+                    'fields': 'files(id, name, size, modifiedTime)',
+                    'q': "name contains '.wm4'"
+                });
+            } catch (err) {
+                console.error("Error listing files:", err);
+                this.GoogleDriveApi.searching = false;
+                return;
+            }
+            const files = response.result.files;
+            if (!files || files.length == 0) {
+                console.log('No files found.');
+                this.GoogleDriveApi.files = [];
+            } else {
+                this.GoogleDriveApi.files = files;
+            }
+            this.GoogleDriveApi.searching = false;
+        },
 
-            }, function (error) {
-                console.error(error)
-            })
-            this.$root.$data.popup.name = null
-            return request;
-        },
+        // This function reads the content of a selected file.
+        GoogleDriveReadFile() {
+            var request = window.gapi.client.drive.files.get({
+                fileId: this.GoogleDriveApi.CURRENT_FILE_OBJ.id,
+                alt: 'media'
+            });
+            request.then(async (response) => {
+                const mydata = new Blob([response.body], {
+                    type: "text/json;charset=utf-8",
+                });
+                await this.$root.databaseImport(mydata);
+                this.$root.getSettings();
+            }, function(error) {
+                console.error("Error reading file:", error);
+            });
+            this.$root.$data.popup.name = null;
+            return request;
+        },
+
+        // This function saves (creates or updates) a file.
         async GoogleDriveWriteFile(callback) {
             this.GoogleDriveApi.loading = true;
             this.GoogleDriveApi.CURRENT_FILE_NAME = this.$root.session.settings.ProjectName;
             let blob = await this.$root.databaseExport();
             let CURRENT_FILE_CONTENTS = await blob.text();
             var filePath = "";
-
             if (this.GoogleDriveApi.CURRENT_FILE_OBJ) {
                 filePath = this.GoogleDriveApi.CURRENT_FILE_OBJ.id;
             }
-
             const boundary = '-------314159265358979323846';
             const delimiter = "\r\n--" + boundary + "\r\n";
             const close_delim = "\r\n--" + boundary + "--";
@@ -150,7 +156,6 @@ async GoogleDriveListFiles() {
             var metadata = { 'name': this.GoogleDriveApi.CURRENT_FILE_NAME + '.wm4', 'mimeType': contentType };
             var multipartRequestBody = delimiter + 'Content-Type: application/json\r\n\r\n' + JSON.stringify(metadata) + delimiter + 'Content-Type: ' + contentType + '\r\n\r\n' + CURRENT_FILE_CONTENTS + close_delim;
             var request;
-
             if (filePath == "") {
                 request = window.gapi.client.request({
                     'path': '/upload/drive/v3/files',
@@ -168,7 +173,6 @@ async GoogleDriveListFiles() {
                     'body': multipartRequestBody
                 });
             }
-
             if (!callback) {
                 callback = (file) => {
                     this.GoogleDriveApi.CURRENT_FILE_OBJ = file.result;
@@ -177,7 +181,7 @@ async GoogleDriveListFiles() {
                 };
             }
             request.execute(callback);
-        }  
+        }
     }
 }
-export default GoogleDriveApi
+export default GoogleDriveApi;
