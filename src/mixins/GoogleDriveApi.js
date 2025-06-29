@@ -154,7 +154,7 @@ const GoogleDriveApi = {
             }
             if (!callback) {
                 callback = (file) => {
-                    this.GoogleDriveApi.CURRENT_FILE_OBJ = file.result;
+                    this.GoogleDriveApi.CURRENT_FILE_OBJ = file;
                     this.GoogleDriveApi.loading = false;
                     this.$root.$data.popup.name = null;
                 };
