@@ -462,3 +462,8 @@ a {
   padding: 0px;
   padding-bottom: 5px;
 }
+/* This is the new rule to fix list spacing */
+.writer .ProseMirror li p {
+  margin-bottom: 0;
+  margin-top: 0;
+}
