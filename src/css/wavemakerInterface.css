@@ -1,6 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,700;1,400&family=Montserrat:wght@100;300;400;500;600;700&family=Open+Sans:wght@300;400;700&family=Quicksand:wght@300;400;500;600;700&family=Raleway&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&family=Special+Elite&family=Tiro+Devanagari+Hindi&display=swap');
-
-
+@import url("https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,700;1,400&family=Montserrat:wght@100;300;400;500;600;700&family=Open+Sans:wght@300;400;700&family=Quicksand:wght@300;400;500;600;700&family=Raleway&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&family=Special+Elite&family=Tiro+Devanagari+Hindi&display=swap");
 
 .writer .ProseMirror {
   text-align: var(--pageEditor-align);
@@ -27,9 +25,9 @@
   overflow-y: scroll;
 }
 
-.writer .ProseMirror p:first-of-type {
+/* .writer .ProseMirror p:first-of-type {
   text-indent: 0px;
-}
+} */
 
 .writer .ProseMirror p {
   margin-bottom: var(--pageEditor-pspacing);
@@ -53,10 +51,8 @@
 }
 
 .writer .ProseMirror {
-  padding-bottom: 400px
+  padding-bottom: 400px;
 }
-
-
 
 .distractionfree .ProseMirror {
   text-align: var(--pageEditor-align);
@@ -160,7 +156,7 @@ label {
   display: block;
   height: 0px;
   border-radius: 0px;
-  background-color: var(--webkit-scrollbar-button)
+  background-color: var(--webkit-scrollbar-button);
 }
 
 ::-webkit-scrollbar-thumb {
@@ -217,7 +213,6 @@ a {
   max-width: 400px;
   margin: 0 auto;
   margin-top: 10%;
-
 }
 
 .wavemaker_info_box {
@@ -230,7 +225,6 @@ a {
   */
   padding: 30px;
   border-radius: 0px;
-
 }
 
 .clearInterfaceIconButton {
@@ -251,15 +245,12 @@ a {
   height: 20px;
 }
 
-
 .clearInterfaceIconButton:hover,
 .clearInterfaceIconButton:active,
 .clearInterfaceIconButton:focus {
   background: var(--button-hover) !important;
   fill: var(--button-hover-f) !important;
 }
-
-
 
 .formInput {
   border: 0px;
@@ -329,7 +320,6 @@ a {
   transition: all 0.3s ease;
   background-color: inherit;
   display: none;
-
 }
 
 .deleteIconButton svg {
@@ -349,12 +339,11 @@ a {
   color: var(--danger-f);
 }
 
-.deleteIconButton:hover>svg,
-.deleteIconButton:active>svg,
-.deleteIconButton:focus>svg {
+.deleteIconButton:hover > svg,
+.deleteIconButton:active > svg,
+.deleteIconButton:focus > svg {
   fill: var(--danger-f) !important;
 }
-
 
 .addIconButton {
   position: relative;
@@ -368,7 +357,6 @@ a {
   background: none;
   transition: all 0.3s ease;
   background-color: inherit;
-
 }
 
 .addIconButton svg {
@@ -388,12 +376,11 @@ a {
   color: var(--success-f);
 }
 
-.addIconButton:hover>svg,
-.addIconButton:active>svg,
-.addIconButton:focus>svg {
+.addIconButton:hover > svg,
+.addIconButton:active > svg,
+.addIconButton:focus > svg {
   fill: var(--success-f) !important;
 }
-
 
 .deleteBtn {
   background-color: var(--success);
@@ -401,11 +388,9 @@ a {
   fill: var(--success-f);
 }
 
-
 .ProseMirror img {
   max-width: 100%;
 }
-
 
 .cardDescription .ProseMirror {
   background-color: inherit;
@@ -417,7 +402,6 @@ a {
   padding: 0px;
   outline: none;
 }
-
 
 .advancedEditor .ProseMirror,
 .descriptionEditor .ProseMirror {

@@ -41,6 +41,28 @@
         <div class="toolbar-content-wrapper">
           <template v-if="editor">
             <button
+              @click="editor.chain().focus().undo().run()"
+              :disabled="!editor.can().undo()"
+              title="Undo"
+            >
+              <svg style="width: 24px; height: 24px" viewBox="0 0 24 24">
+                <path
+                  d="M12.5,8C9.85,8 7.45,9 5.6,10.6L2,7V16H11L7.38,12.38C8.77,11.22 10.54,10.5 12.5,10.5C16.04,10.5 19.05,12.81 20.1,16L22.47,15.22C21.08,11.03 17.15,8 12.5,8Z"
+                />
+              </svg>
+            </button>
+            <button
+              @click="editor.chain().focus().redo().run()"
+              :disabled="!editor.can().redo()"
+              title="Redo"
+            >
+              <svg style="width: 24px; height: 24px" viewBox="0 0 24 24">
+                <path
+                  d="M18.4,10.6C16.55,9 14.15,8 11.5,8C6.85,8 2.92,11.03 1.53,15.22L3.9,16C4.95,12.81 7.96,10.5 11.5,10.5C13.46,10.5 15.23,11.22 16.62,12.38L13,16H22V7L18.4,10.6Z"
+                />
+              </svg>
+            </button>
+            <button
               @click="editor.chain().focus().toggleBold().run()"
               :class="{ 'is-active': editor.isActive('bold') }"
               :title="this.$root.setlang.editor.bold"
@@ -361,7 +383,23 @@
 
 <script>
 import { Editor, EditorContent } from "@tiptap/vue-3";
-import StarterKit from "@tiptap/starter-kit";
+
+// CORE EXTENSIONS
+import Document from "@tiptap/extension-document";
+import Paragraph from "@tiptap/extension-paragraph";
+import Text from "@tiptap/extension-text";
+import Bold from "@tiptap/extension-bold";
+import Italic from "@tiptap/extension-italic";
+import Strike from "@tiptap/extension-strike";
+import Heading from "@tiptap/extension-heading";
+import BulletList from "@tiptap/extension-bullet-list";
+import OrderedList from "@tiptap/extension-ordered-list";
+import ListItem from "@tiptap/extension-list-item";
+import History from "@tiptap/extension-history";
+import Dropcursor from "@tiptap/extension-dropcursor";
+import Gapcursor from "@tiptap/extension-gapcursor";
+// ADDITIONAL EXTENSIONS
+import HardBreak from "@tiptap/extension-hard-break";
 import Typography from "@tiptap/extension-typography";
 import Image from "@tiptap/extension-image";
 import Highlight from "@tiptap/extension-highlight";
@@ -395,7 +433,9 @@ export default {
   },
   methods: {
     // All your other methods like wordcountToggle, repositionEditor, etc. go here
-    // ...
+    changed() {
+      this.$root.UpdateRecord("Files", this.item.uuid, this.item);
+    },
     scrollToolbar(direction) {
       const toolbar = this.$refs.toolbar;
       if (toolbar) {
@@ -433,43 +473,55 @@ export default {
     },
   },
   mounted() {
-    this.editor = new Editor({
-      extensions: [
-        StarterKit,
-        Typography,
-        Image,
-        Highlight.configure({ multicolor: true }),
-        TextAlign.configure({
-          types: ["heading", "paragraph"],
-        }),
-        Underline,
-      ],
-      content: this.item ? this.item.content : "",
-      onUpdate: () => {
-        if (!this.item) return;
-        this.item.wordcount = this.$root.wordCounter(this.editor.getHTML());
-        this.item.content = this.editor.getHTML();
-        this.changed();
-      },
-    });
-
-    // Watch for the item to load before setting up observers
+    // 1. Watch for the 'item' data to be loaded from the database
     this.$watch(
       "item",
       (newItem) => {
-        if (newItem && !this.editor.isDestroyed) {
-          // Only set content if it's different
-          const isSameContent = this.editor.getHTML() === newItem.content;
-          if (!isSameContent) {
-            this.editor.commands.setContent(newItem.content, false);
-          }
+        // Make sure we have data and an editor instance hasn't been created yet
+        if (newItem && !this.editor) {
+          // 2. NOW, create the Tiptap editor instance
+          this.editor = new Editor({
+            extensions: [
+              Document,
+              Paragraph,
+              Text,
+              Bold,
+              Italic,
+              Strike,
+              Underline,
+              Heading.configure({ levels: [1, 2, 3] }),
+              BulletList,
+              OrderedList,
+              ListItem,
+              History,
+              Dropcursor,
+              Gapcursor,
+              Typography,
+              Image,
+              Highlight.configure({ multicolor: true }),
+              TextAlign.configure({
+                types: ["heading", "paragraph"],
+                defaultAlignment: "left",
+              }),
+            ],
+            content: newItem.content,
+            onUpdate: () => {
+              if (!this.item) return;
+              this.item.wordcount = this.$root.wordCounter(
+                this.editor.getHTML()
+              );
+              this.item.content = this.editor.getHTML();
+              this.changed();
+            },
+            onSelectionUpdate: () => {
+              this.$forceUpdate();
+            },
+          });
 
-          // Now that the editor is populated, set up the observers
-          // Use $nextTick to ensure the DOM has rendered
+          // 4. Set up observers and listeners only ONCE
           this.$nextTick(() => {
             const toolbar = this.$refs.toolbar;
             if (toolbar) {
-              // Observer for button changes (e.g., expanding menus)
               this.toolbarObserver = new MutationObserver(() =>
                 this.checkArrowVisibility()
               );
@@ -478,26 +530,34 @@ export default {
                 subtree: true,
               });
 
-              // Observer for container size changes (e.g., side panel)
               this.containerObserver = new ResizeObserver(() =>
                 this.checkArrowVisibility()
               );
               this.containerObserver.observe(toolbar.parentElement);
 
-              // Listener for manual scrolling
               toolbar.addEventListener("scroll", this.checkArrowVisibility);
+              window.addEventListener("resize", this.checkArrowVisibility);
 
-              // Initial check to set the correct state on load
               this.checkArrowVisibility();
             }
           });
         }
+        // This handles changing to a DIFFERENT file later
+        else if (newItem && this.editor) {
+          const isSameContent = this.editor.getHTML() === newItem.content;
+          if (!isSameContent) {
+            // The correct, documented way to load content without adding an undo step
+            this.editor.commands.setContent(newItem.content, false, {
+              addToHistory: false,
+            });
+          }
+        }
       },
-      { immediate: true }
+      {
+        immediate: true,
+        deep: true, // Watch for nested changes
+      }
     );
-
-    // A single listener on the window for resizing
-    window.addEventListener("resize", this.checkArrowVisibility);
   },
   beforeUnmount() {
     // Clean up everything to prevent memory leaks

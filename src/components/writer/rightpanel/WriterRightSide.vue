@@ -347,7 +347,6 @@ export default {
 .menu {
   font-weight: 100;
   z-index: 100;
-
   background: var(--writer-side-panels);
   color: var(--writer-side-panels-f);
   width: 300px;
