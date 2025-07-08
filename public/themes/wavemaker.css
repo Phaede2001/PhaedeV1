@@ -23,12 +23,11 @@
   --c9-f: #fff;
   --c10-f: #fff;
 
-
   --accent: rgb(112, 6, 112);
   --accent-f: rgb(255, 255, 255);
-  --warn: #FF8C00;
+  --warn: #ff8c00;
   --warn-f: #fff;
-  --danger: #B22222;
+  --danger: #b22222;
   --danger-f: #fff;
   --success: #006400;
   --success-f: #fff;
@@ -38,7 +37,7 @@
   --window: var(--c9);
   --window-f: var(--c9-f);
 
-  --sysfont: 'Quicksand', sans-serif;
+  --sysfont: "Quicksand", sans-serif;
 
   --paper: var(--c0);
   --paper-f: var(--c0-f);
@@ -79,7 +78,6 @@
   --writer-side-nav: var(--c8);
   --writer-side-nav-f: var(--c8-f);
 
-
   --writer-title-bar: var(--c8);
   --writer-title-bar-f: var(--c8-f);
 
@@ -103,7 +101,6 @@
   --grid-th-f: var(--c8-f);
   --grid-cell-bg: var(--c7);
 
-
   --tl-bar: var(--c5);
   --tl-dot: var(--c8);
   --tl-date: var(--c10);
@@ -123,7 +120,6 @@
   --mm-node: var(--c10-f);
   --mm-node-f: var(--c10);
 
-
   --card1: var(--card);
   --card1-f: var(--card-f);
   --card2: #f06292;
@@ -141,11 +137,11 @@
 
   --pageEditor-align: left;
   --pageEditor-fontsize: 1.5rem;
-  --pageEditor-lspacing: 3rem;
+  --pageEditor-lspacing: 1.5rem;
   --pageEditor-indentation: 20px;
   --pageEditor-pspacing: 20px;
   --pageEditor-page: 800px;
-  --pageEditor-font: "Merriweather", 'Times New Roman', Times, serif;
+  --pageEditor-font: "Merriweather", "Times New Roman", Times, serif;
   --pageEditor-color: #424242;
   --pageEditor-bgcolor: #fafafa;
   --pageEditor-h1align: center;
@@ -155,6 +151,5 @@
 
   --distractionfree-bg: #fafafa;
   --distractionfree-fg: #646464;
-  --distractionfree-font: 'Special Elite', 'Courier New', Courier, monospace;
-
+  --distractionfree-font: "Special Elite", "Courier New", Courier, monospace;
 }
