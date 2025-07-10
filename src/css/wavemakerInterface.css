@@ -27,6 +27,8 @@
 
 .writer .ProseMirror p {
   margin-bottom: var(--pageEditor-pspacing);
+}
+.writer .ProseMirror p:not(li p) {
   text-indent: var(--pageEditor-indentation);
 }
 
@@ -49,6 +51,15 @@
 .writer .ProseMirror {
   padding-bottom: 400px;
 }
+.writer .ProseMirror li p {
+  margin-bottom: 0;
+  margin-top: 0;
+}
+.writer .ProseMirror h1,
+.writer .ProseMirror h2,
+.writer .ProseMirror h3 {
+  line-height: 1.2em;
+}
 
 .distractionfree .ProseMirror {
   text-align: var(--pageEditor-align);
@@ -63,31 +74,22 @@
   outline: none;
 }
 
-.distractionfree .ProseMirror p:first-of-type {
-  text-indent: 0px;
-}
-
 .distractionfree .ProseMirror p {
   margin-bottom: var(--pageEditor-pspacing);
+}
+.distractionfree .ProseMirror p:not(li p) {
   text-indent: var(--pageEditor-indentation);
 }
-
-.distractionfree .ProseMirror h1 {
-  text-align: var(--pageEditor-h1align);
-}
-
-.distractionfree .ProseMirror h2 {
-  text-align: var(--pageEditor-h2align);
-}
-
+.distractionfree .ProseMirror h1,
+.distractionfree .ProseMirror h2,
 .distractionfree .ProseMirror h3 {
-  text-align: var(--pageEditor-h3align);
+  line-height: 1.2em;
 }
 
-.distractionfree .ProseMirror h4 {
-  text-align: var(--pageEditor-h4align);
+.distractionfree .ProseMirror li p {
+  margin-bottom: 0;
+  margin-top: 0;
 }
-
 /* apply a natural box layout model to all elements, but allowing components to change */
 html {
   box-sizing: border-box;
@@ -430,9 +432,4 @@ a {
   margin: 0px;
   padding: 0px;
   padding-bottom: 5px;
-}
-/* This is the new rule to fix list spacing */
-.writer .ProseMirror li p {
-  margin-bottom: 0;
-  margin-top: 0;
 }

@@ -137,7 +137,7 @@
 
   --pageEditor-align: left;
   --pageEditor-fontsize: 1.5rem;
-  --pageEditor-lspacing: 2rem;
+  --pageEditor-lspacing: 2.3rem;
   --pageEditor-indentation: 20px;
   --pageEditor-pspacing: 20px;
   --pageEditor-page: 800px;
@@ -151,5 +151,5 @@
 
   --distractionfree-bg: #fafafa;
   --distractionfree-fg: #646464;
-  --distractionfree-font: "Special Elite", "Courier New", Courier, monospace;
+  --distractionfree-font: "Courier New", Courier, monospace;
 }
