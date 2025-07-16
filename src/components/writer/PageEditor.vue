@@ -110,6 +110,17 @@
               </svg>
             </button>
 
+            <button
+              @click="setLink"
+              :class="{ 'is-active': editor.isActive('link') }"
+              title="Hyperlink"
+            >
+              <svg style="width: 24px; height: 24px" viewBox="0 0 24 24">
+                <path
+                  d="M10.59,13.41C11,13.8 11,14.44 10.59,14.83C10.2,15.22 9.56,15.22 9.17,14.83L5.17,10.83C4.78,10.44 4.78,9.81 5.17,9.41C5.56,9 6.2,9 6.59,9.41L10.59,13.41M13.41,6.59L17.41,10.59C17.8,11 17.8,11.63 17.41,12.02C17,12.41 16.37,12.41 15.98,12.02L11.98,8.02C11.59,7.63 11.59,7 11.98,6.59C12.37,6.2 13.02,6.2 13.41,6.59M19,3L14.76,7.24C14.37,7.63 14.37,8.26 14.76,8.65L15.35,9.24C15.74,9.63 16.37,9.63 16.76,9.24L21,5M3,19L7.24,14.76C7.63,14.37 8.26,14.37 8.65,14.76L9.24,15.35C9.63,15.74 9.63,16.37 9.24,16.76L5,21"
+                />
+              </svg>
+            </button>
             <div
               class="toolbar-group"
               :class="{ 'is-expanded': headingsMenuOpen }"
@@ -383,6 +394,7 @@
 
 <script>
 import { Editor, EditorContent } from "@tiptap/vue-3";
+import { DOMParser } from "prosemirror-model";
 
 // CORE EXTENSIONS
 import Document from "@tiptap/extension-document";
@@ -398,6 +410,8 @@ import ListItem from "@tiptap/extension-list-item";
 import History from "@tiptap/extension-history";
 import Dropcursor from "@tiptap/extension-dropcursor";
 import Gapcursor from "@tiptap/extension-gapcursor";
+// ** NEW IMPORT **
+import Link from "@tiptap/extension-link";
 // ADDITIONAL EXTENSIONS
 import HardBreak from "@tiptap/extension-hard-break";
 import Typography from "@tiptap/extension-typography";
@@ -432,6 +446,39 @@ export default {
     };
   },
   methods: {
+    // ** NEW METHOD START **
+    // In the methods object, replace the entire setLink method
+    setLink() {
+      const previousUrl = this.editor.getAttributes("link").href;
+      let url = window.prompt("URL", previousUrl);
+
+      // cancelled
+      if (url === null) {
+        return;
+      }
+
+      // empty
+      if (url === "") {
+        this.editor.chain().focus().extendMarkRange("link").unsetLink().run();
+        return;
+      }
+
+      // ** CHANGE START: Prepend http:// if no protocol is present **
+      if (url && !url.startsWith("http://") && !url.startsWith("https://")) {
+        url = `http://${url}`;
+      }
+      // ** CHANGE END **
+
+      // update link
+      this.editor
+        .chain()
+        .focus()
+        .extendMarkRange("link")
+        .setLink({ href: url })
+        .run();
+    },
+    // ** NEW METHOD END **
+
     // All your other methods like wordcountToggle, repositionEditor, etc. go here
     changed() {
       this.$root.UpdateRecord("Files", this.item.uuid, this.item);
@@ -489,6 +536,12 @@ export default {
               Italic,
               Strike,
               Underline,
+              // ** NEW EXTENSION CONFIGURATION **
+              Link.configure({
+                autolink: true,
+                openOnClick: true,
+                validate: (href) => /^https?:\/\//.test(href),
+              }),
               Heading.configure({ levels: [1, 2, 3] }),
               BulletList,
               OrderedList,
@@ -504,6 +557,25 @@ export default {
                 defaultAlignment: "left",
               }),
             ],
+            editorProps: {
+              handleDOMEvents: {
+                paste(view, event) {
+                  let pastedHTML = event.clipboardData.getData("text/html");
+                  if (pastedHTML) {
+                    // Use ProseMirror's DOMParser to correctly parse the pasted HTML
+                    let slice = DOMParser.fromSchema(
+                      view.state.schema
+                    ).parseSlice(
+                      new DOMParser().parseFromString(pastedHTML, "text/html")
+                    );
+                    // Dispatch a transaction to insert the parsed content
+                    view.dispatch(view.state.tr.replaceSelection(slice));
+                    return true; // We've handled the paste event
+                  }
+                  return false; // Let ProseMirror handle the default (plain text)
+                },
+              },
+            },
             content: newItem.content,
             onUpdate: () => {
               if (!this.item) return;
@@ -578,7 +650,18 @@ export default {
   },
 };
 </script>
+
 <style scoped>
+.right-arrow {
+  border-left: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+/* ADD THESE RULES */
+.PageEditorScroll :deep(.ProseMirror a) {
+  color: var(--accent);
+  cursor: pointer;
+  pointer-events: auto;
+}
 .hilighter {
   position: absolute;
   padding: 5px;

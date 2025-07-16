@@ -13,6 +13,7 @@
     "@tiptap/extension-dropcursor": "^2.0.0-beta.25",
     "@tiptap/extension-highlight": "^2.0.0-beta.202",
     "@tiptap/extension-image": "^2.0.0-beta.27",
+    "@tiptap/extension-link": "^2.23.0",
     "@tiptap/extension-task-item": "^2.0.0-beta.32",
     "@tiptap/extension-task-list": "^2.0.0-beta.26",
     "@tiptap/extension-text-align": "^2.23.1",
