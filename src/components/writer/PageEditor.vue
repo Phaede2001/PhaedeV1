@@ -115,9 +115,14 @@
               :class="{ 'is-active': editor.isActive('link') }"
               title="Hyperlink"
             >
-              <svg style="width: 24px; height: 24px" viewBox="0 0 24 24">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                width="24"
+                height="24"
+              >
                 <path
-                  d="M10.59,13.41C11,13.8 11,14.44 10.59,14.83C10.2,15.22 9.56,15.22 9.17,14.83L5.17,10.83C4.78,10.44 4.78,9.81 5.17,9.41C5.56,9 6.2,9 6.59,9.41L10.59,13.41M13.41,6.59L17.41,10.59C17.8,11 17.8,11.63 17.41,12.02C17,12.41 16.37,12.41 15.98,12.02L11.98,8.02C11.59,7.63 11.59,7 11.98,6.59C12.37,6.2 13.02,6.2 13.41,6.59M19,3L14.76,7.24C14.37,7.63 14.37,8.26 14.76,8.65L15.35,9.24C15.74,9.63 16.37,9.63 16.76,9.24L21,5M3,19L7.24,14.76C7.63,14.37 8.26,14.37 8.65,14.76L9.24,15.35C9.63,15.74 9.63,16.37 9.24,16.76L5,21"
+                  d="M10.59,13.41C11,13.8 11,14.44 10.59,14.83C10.2,15.22 9.56,15.22 9.17,14.83C7.22,12.88 7.22,9.71 9.17,7.76L12.71,4.22C14.66,2.27 17.83,2.27 19.78,4.22C21.73,6.17 21.73,9.34 19.78,11.29L18.29,12.78C18.3,11.96 18.17,11.14 17.89,10.36L18.36,9.88C19.54,8.71 19.54,6.81 18.36,5.64C17.19,4.46 15.29,4.46 14.12,5.64L10.59,9.17C9.41,10.34 9.41,12.24 10.59,13.41M13.41,10.59C13.8,10.2 14.44,10.2 14.83,10.59C16.78,12.54 16.78,15.71 14.83,17.76L11.29,21.29C9.34,23.24 6.17,23.24 4.22,21.29C2.27,19.34 2.27,16.17 4.22,14.22L5.71,12.73C5.7,13.55 5.83,14.37 6.11,15.15L5.64,15.63C4.46,16.81 4.46,18.71 5.64,19.88C6.81,21.06 8.71,21.06 9.88,19.88L13.41,16.35C14.59,15.18 14.59,13.28 13.41,10.59Z"
                 />
               </svg>
             </button>
@@ -389,6 +394,14 @@
     <div class="wordcountdisplay" v-if="item">
       {{ item.wordcount }} / {{ this.$root.fullWordCount }}
     </div>
+    <LinkModal
+      v-if="isLinkModalVisible"
+      :initial-url="editingLink.url"
+      :initial-new-tab="editingLink.newTab"
+      @close="closeLinkModal"
+      @apply="handleApplyLink"
+      @remove="handleRemoveLink"
+    />
   </div>
 </template>
 
@@ -419,6 +432,8 @@ import Image from "@tiptap/extension-image";
 import Highlight from "@tiptap/extension-highlight";
 import TextAlign from "@tiptap/extension-text-align";
 import Underline from "@tiptap/extension-underline";
+import LinkModal from "../popups/LinkModal.vue";
+import { debounce } from "lodash";
 
 export default {
   name: "NewPage",
@@ -427,6 +442,7 @@ export default {
   },
   components: {
     EditorContent,
+    LinkModal,
   },
   data() {
     return {
@@ -436,47 +452,63 @@ export default {
         )
       ),
       editor: null,
+      isLinkModalVisible: false,
+      editingLink: { url: "", newTab: true },
       headingsMenuOpen: false,
       alignmentMenuOpen: false,
       listMenuOpen: false,
       showLeftArrow: false,
       showRightArrow: false,
       toolbarObserver: null,
+      debouncedUpdate: null,
       containerObserver: null,
     };
   },
   methods: {
     // ** NEW METHOD START **
     // In the methods object, replace the entire setLink method
+    // Inside the methods: { ... } object
     setLink() {
-      const previousUrl = this.editor.getAttributes("link").href;
-      let url = window.prompt("URL", previousUrl);
-
-      // cancelled
-      if (url === null) {
-        return;
-      }
-
-      // empty
-      if (url === "") {
-        this.editor.chain().focus().extendMarkRange("link").unsetLink().run();
-        return;
-      }
-
-      // ** CHANGE START: Prepend http:// if no protocol is present **
-      if (url && !url.startsWith("http://") && !url.startsWith("https://")) {
-        url = `http://${url}`;
-      }
-      // ** CHANGE END **
-
-      // update link
-      this.editor
-        .chain()
-        .focus()
-        .extendMarkRange("link")
-        .setLink({ href: url })
-        .run();
+      const attrs = this.editor.getAttributes("link");
+      this.editingLink = {
+        url: attrs.href || "",
+        newTab: attrs.target === "_blank",
+      };
+      this.isLinkModalVisible = true;
     },
+    initializeDebouncedUpdate() {
+      this.debouncedUpdate = debounce(() => {
+        this.item.content = this.editor.getHTML();
+        this.item.wordcount = this.$root.wordCounter(this.editor.getHTML());
+        this.changed();
+      }, 500); // 500ms delay
+    },
+
+    handleApplyLink(payload) {
+      if (payload.href) {
+        this.editor
+          .chain()
+          .focus()
+          .extendMarkRange("link")
+          .setLink({
+            href: payload.href,
+            target: payload.newTab ? "_blank" : null,
+          })
+          .run();
+      } else {
+        this.handleRemoveLink();
+      }
+    },
+
+    handleRemoveLink() {
+      this.editor.chain().focus().extendMarkRange("link").unsetLink().run();
+    },
+
+    closeLinkModal() {
+      this.isLinkModalVisible = false;
+      this.editingLink = { url: "", newTab: true };
+    },
+
     // ** NEW METHOD END **
 
     // All your other methods like wordcountToggle, repositionEditor, etc. go here
@@ -540,7 +572,6 @@ export default {
               Link.configure({
                 autolink: true,
                 openOnClick: true,
-                validate: (href) => /^https?:\/\//.test(href),
               }),
               Heading.configure({ levels: [1, 2, 3] }),
               BulletList,
@@ -579,16 +610,13 @@ export default {
             content: newItem.content,
             onUpdate: () => {
               if (!this.item) return;
-              this.item.wordcount = this.$root.wordCounter(
-                this.editor.getHTML()
-              );
-              this.item.content = this.editor.getHTML();
-              this.changed();
+              this.debouncedUpdate();
             },
             onSelectionUpdate: () => {
               this.$forceUpdate();
             },
           });
+          this.initializeDebouncedUpdate();
 
           // 4. Set up observers and listeners only ONCE
           this.$nextTick(() => {
